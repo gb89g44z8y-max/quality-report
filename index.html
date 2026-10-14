@@ -79,93 +79,79 @@ textarea{width:100%;min-height:80px;font-size:16px;border:1.5px solid #ccc;borde
 .res{margin-top:2mm;padding:1.5mm;border:.3mm solid #888;text-align:center;font-weight:bold}.res.ok{color:#137333}.res.bad{color:#d93025}
 .decb{margin-top:2mm;font-size:11pt}.notes{border:.2mm solid #888;min-height:12mm;padding:1mm;margin-top:2mm}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:4mm}.pgrid img{width:100%;height:95mm;object-fit:contain;border:.2mm solid #aaa}}
+.badge{font-size:12.5px;padding:3px 8px;border-radius:8px}.badge.ok{background:#e6f4ea;color:#137333}.badge.bad{background:#fdecea;color:#d93025}
+button.sm{min-height:34px;font-size:13px;padding:4px 10px}.phbtn{display:block;text-align:center;padding:10px;border-radius:10px;margin-top:8px;font-size:14px;color:var(--g)}
+.phs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.ph1{position:relative}.ph1 img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}.ph1 button{position:absolute;top:2px;left:2px;min-height:26px;width:26px;padding:0;border-radius:50%}
+.two2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+@media print{table.pt td{white-space:normal;height:auto;line-height:1.25;padding:.6mm 1mm}tr.bd td{color:#b00}table.sm2 td,table.sm2 th{font-size:9pt;height:5.5mm}table.sm2{margin-bottom:3mm}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}.pgrid figure{margin:0}.pgrid img{width:100%;height:60mm;object-fit:contain;border:.2mm solid #aaa}.pgrid figcaption{font-size:8pt;text-align:center}}
 </style></head><body>
 <header class="bar"><h1>تقرير الجودة</h1><div class="stat" id="stat"></div></header>
 <main>
-<div class="card"><h2>بيانات الباليت</h2><div class="grid2" id="hdr"></div><div class="hint">لو الباليت متسجل في برنامج الإنتاج على نفس الموبايل، الصنف والمقاس والدرجة والكرتون بيتكتبوا لوحدهم.</div></div>
-<div class="card alerts" id="alerts"></div>
-<div class="card"><h2>الفحص</h2><div class="grid2" id="qc"></div></div>
-<div class="card"><h2>العيوب</h2><div class="hint">اكتب عدد الثمار المعيبة من العينة، والنسبة بتتحسب لوحدها.</div><div id="def"></div>
-<label>الحد المسموح لإجمالي العيوب %</label><input id="tol" type="number" inputmode="decimal" step="any"></div>
-<div class="card"><h2>فحص التعبئة</h2><div id="pk"></div></div>
-<div class="card"><h2>الحرارة والوزن</h2><div class="grid2" id="tmp"></div></div>
-<div class="card"><h2>الصور</h2><label class="btn2" style="display:block;text-align:center;padding:12px;border-radius:12px;color:var(--g)">+ صورة من الكاميرا<input id="phIn" type="file" accept="image/*" capture="environment" multiple style="display:none"></label><div id="phs"></div></div>
-<div class="card"><h2>القرار</h2><select id="dec"><option value=""></option><option value="acc">مقبول</option><option value="rej">مرفوض</option><option value="hold">تحت المراجعة</option></select><div class="hint" id="sugg"></div>
-<label>ملاحظات</label><textarea id="note"></textarea></div>
+<div class="card"><h2>بيانات اليوم</h2><div class="grid2"><div><label>التاريخ</label><input id="date" type="date"></div><div><label>مراقب الجودة</label><input id="insp"></div></div>
+<div class="hint">الحد المسموح 15% للكرتونة، وأي حبة معفنة تخلي الكرتونة مخالفة. نسبة المعيب = (حبات العفن + حبات التشوهات) ÷ عدد الحبات.</div></div>
+<div class="card"><h2>فحص التشغيل</h2><div id="rows"></div><datalist id="pl"></datalist><button class="btn2" style="width:100%" id="addRow">+ إضافة كرتونة</button></div>
+<div class="card"><h2>ملخص اليوم</h2><div id="summary"></div></div>
 <div class="hint" style="text-align:center">بيتحفظ تلقائياً على الموبايل ده. يشتغل من غير إنترنت.</div>
 </main>
-<div class="actions"><button class="btn" id="bPrint">PDF / طباعة</button><button class="btn2" id="bXlsx">Excel</button><button class="btn2" id="bShare">مشاركة</button><button class="btn3" id="bNew">تقرير جديد</button></div>
+<div class="actions"><button class="btn" id="bPrint">PDF / طباعة</button><button class="btn2" id="bXlsx">Excel</button><button class="btn2" id="bShare">مشاركة</button><button class="btn3" id="bNew">يوم جديد</button></div>
 <div id="print"></div>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const L={"variety":["أبو سرة","صيفي","موركيت كيني","موركيت إسباني","ليمون"],"size":["20","28","32","36","40","42","48","56","64","72","80","88","100","113"],"carton":["مقفول 7 ك","أوبن 7 ك","كرتون 14 ك","كرتون 15 ك"],"grade":["أولى","تانية"],"shift":["صباحي","مسائي","ليلي"]};
-const KEY='alola_quality_v1',PKEY='alola_production_v1',VALID=/^P\d{4}$/;
-const HF=[['date','التاريخ','date'],['shift','الوردية','sel:shift'],['insp','مراقب الجودة'],['p','رقم الباليت / اللوت','pal'],['v','الصنف','sel:variety'],['s','المقاس','sel:size'],['g','الدرجة','sel:grade'],['c','نوع الكرتون','sel:carton'],['cust','العميل / الوجهة']];
-const QF=[['n','حجم العينة (عدد ثمار)','num'],['fw','متوسط وزن الثمرة (جم)','num'],['unif','تجانس الحجم %','num'],['color','نسبة التلوين %','num'],['brix','البركس (TSS) %','num'],['acid','الحموضة %','num'],['ratio','نسبة البركس/الحموضة','ro'],['juice','نسبة العصير %','num'],['firm','الصلابة','sel:firm']];
-L.firm=['جامدة','متوسطة','طرية'];
-const DF=[['rot','عفن / تحلل'],['mech','خدوش وجروح ميكانيكية'],['wind','خدش رياح'],['sun','لسعة شمس'],['ins','حشرات / قشريات'],['mold','عفن أخضر/أزرق'],['soft','ثمار طرية'],['oleo','أوليوسيلوسيس (حرق زيت)'],['offs','خارج المقاس'],['offc','خارج اللون']];
-const PK=[['cw','وزن الكرتونة مظبوط'],['lab','الليبل والبيانات'],['wax','التشميع'],['plu','استيكر PLU'],['pal','الرص وزوايا الباليت']];
-const TF=[['pulp','حرارة اللب °م','num'],['room','حرارة الثلاجة °م','num'],['cwv','وزن كرتونة فعلي (كجم)','num']];
-const DEC={acc:'مقبول',rej:'مرفوض',hold:'تحت المراجعة'};
-const blank=(k)=>({h:{date:new Date().toISOString().slice(0,10),shift:'',insp:k?.insp||'',p:'',v:'',s:'',g:'',c:'',cust:''},q:{},d:{},pk:{},t:{},tol:k?.tol??5,dec:'',note:'',ph:[]});
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&x.h)return x}catch(e){}return blank()}
+const L={variety:["أبو سرة","صيفي","موركيت كيني","موركيت إسباني","ليمون"],size:["40","48","56","64","72","80","88","100","113","20","28","32","36","42"],carton:["مقفول 7 ك","أوبن 7 ك","كرتون 14 ك","كرتون 15 ك"],grade:["أولى","تانية"],
+rot:["عفن أخضر","عفن أزرق","عفن حامضي","عفن أسود","عفن بني","عفن طرف العنق","أخرى","نتشة","عفن السرة","قطيع عالي"],
+def:["خدش / جرح","كدمات / ضغط","تشوه شكل","حرق شمس","تبقع زيتي","خدوش رياح","حشرات / قشرية","حجم مخالف","أخرى"]};
+const TOL=15,KEY='alola_qc_carton_v1',PKEY='alola_production_v1',VALID=/^P\d{4}$/;
+const now=()=>new Date().toTimeString().slice(0,5),today=()=>new Date().toISOString().slice(0,10);
+const er=(p)=>({time:now(),v:p?.v||'',s:p?.s||'',c:p?.c||'',g:p?.g||'',n:'',w:'',p:'',rn:'',rt:'',dn:'',dt:'',note:'',phC:[],phR:[],phD:[]});
+const blank=k=>({date:today(),insp:k?.insp||'',rows:[er()]});
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&x.rows)return x}catch(e){}return blank()}
 let S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('مساحة التخزين اتملت — قلل عدد الصور')}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('مساحة التخزين على الموبايل اتملت — امسح صور قديمة أو ابدأ يوم جديد بعد ما تبعت التقرير')}}
 function prodPallets(){try{const x=JSON.parse(localStorage.getItem(PKEY));return (x&&x.rows||[]).filter(r=>VALID.test(r.p||''))}catch(e){return[]}}
-function field(obj,key,label,type){const id=obj+'_'+key;let inp;
- if(type&&type.startsWith('sel:')){inp=`<select id="${id}"><option value=""></option>${L[type.slice(4)].map(o=>`<option>${esc(o)}</option>`).join('')}</select>`}
- else if(type==='date')inp=`<input id="${id}" type="date">`;
- else if(type==='num')inp=`<input id="${id}" type="number" inputmode="decimal" step="any">`;
- else if(type==='ro')inp=`<input id="${id}" readonly style="background:#eee">`;
- else if(type==='pal')inp=`<input id="${id}" list="pl" dir="ltr" style="text-align:center;font-weight:bold" placeholder="P0001"><datalist id="pl"></datalist><div class="msg" id="pmsg"></div>`;
- else inp=`<input id="${id}">`;return `<div><label>${label}</label>${inp}</div>`}
-function build(){
- $('hdr').innerHTML=HF.map(f=>field('h',...f)).join('');
- $('qc').innerHTML=QF.map(f=>field('q',...f)).join('');
- $('tmp').innerHTML=TF.map(f=>field('t',...f)).join('');
- $('def').innerHTML=`<table class="sum"><tr><th>العيب</th><th>عدد</th><th>%</th></tr>${DF.map(([k,l])=>`<tr><td style="text-align:right">${l}</td><td><input id="d_${k}" type="number" inputmode="numeric" min="0" style="min-height:40px;text-align:center"></td><td id="dp_${k}">0</td></tr>`).join('')}<tr><th>إجمالي العيوب</th><th id="dsum">0</th><th id="dpct">0</th></tr></table>`;
- $('pk').innerHTML=PK.map(([k,l])=>`<div class="pkr"><span>${l}</span><select id="pk_${k}"><option value=""></option><option>مطابق</option><option>غير مطابق</option></select></div>`).join('');
- const dl=$('pl');dl.innerHTML=prodPallets().map(r=>`<option value="${esc(r.p)}">${esc([r.v,r.s,r.g].join(' '))}</option>`).join('');
- document.querySelectorAll('main input,main select,main textarea').forEach(e=>e.addEventListener('input',onInp));
-}
-function fill(){HF.forEach(([k])=>$('h_'+k).value=S.h[k]??'');QF.forEach(([k])=>$('q_'+k).value=S.q[k]??'');TF.forEach(([k])=>$('t_'+k).value=S.t[k]??'');DF.forEach(([k])=>$('d_'+k).value=S.d[k]??'');PK.forEach(([k])=>$('pk_'+k).value=S.pk[k]??'');$('tol').value=S.tol;$('note').value=S.note;$('dec').value=S.dec;renderPh();upd()}
-function onInp(e){const [o,k]=e.target.id.split(/_(.+)/);
- if(e.target.id==='h_p'){e.target.value=e.target.value.toUpperCase().replace(/\s/g,'');const r=prodPallets().find(x=>x.p===e.target.value);if(r){['v','s','g','c'].forEach(f=>{if(!S.h[f]&&r[f]){S.h[f]=r[f];$('h_'+f).value=r[f]}})}}
- if(o==='h')S.h[k]=e.target.value;else if(o==='q')S.q[k]=e.target.value;else if(o==='t')S.t[k]=e.target.value;else if(o==='d')S.d[k]=e.target.value;else if(o==='pk')S.pk[k]=e.target.value;
- else if(e.target.id==='tol')S.tol=e.target.value;else if(e.target.id==='note')S.note=e.target.value;else if(e.target.id==='dec')S.dec=e.target.value;
- save();upd()}
-const r2=x=>Math.round(x*100)/100;
-function calc(){const n=Number(S.q.n)||0;const per={};let sum=0;DF.forEach(([k])=>{const c=Number(S.d[k])||0;sum+=c;per[k]=n?r2(c/n*100):0});
- const pct=n?r2(sum/n*100):0;const b=Number(S.q.brix),a=Number(S.q.acid);const ratio=b&&a?r2(b/a):'';
- const tol=Number(S.tol)||0;const pass=n>0&&pct<=tol;const pkBad=PK.filter(([k])=>S.pk[k]==='غير مطابق').length;
- const pv=S.h.p,pOk=!pv||VALID.test(pv),inProd=prodPallets().some(x=>x.p===pv);return {n,per,sum,pct,ratio,tol,pass,pkBad,pOk,inProd}}
-function upd(){const A=calc();DF.forEach(([k])=>$('dp_'+k).textContent=A.per[k]);$('dsum').textContent=A.sum;$('dpct').textContent=A.pct+'%';$('q_ratio').value=A.ratio;
- const pm=$('pmsg');$('h_p').classList.toggle('err',!A.pOk);pm.style.color=A.pOk?'#137333':'';pm.textContent=!S.h.p?'':!A.pOk?'رقم الباليت لازم P + 4 أرقام (مثال P0001)':A.inProd?'موجود في الإنتاج اليومي على الموبايل ده':'';
- const al=[];if(!A.n)al.push(['a-bad','اكتب حجم العينة عشان تتحسب النسب']);else al.push([A.pass?'a-ok':'a-bad',`إجمالي العيوب ${A.pct}% — ${A.pass?'مطابق':'أعلى من'} الحد المسموح ${A.tol}%`]);
- if(A.pkBad)al.push(['a-bad',`${A.pkBad} بند تعبئة غير مطابق`]);if(!A.pOk)al.push(['a-bad','رقم الباليت غلط']);
- $('alerts').innerHTML=al.map(x=>`<div class="${x[0]}">${x[1]}</div>`).join('');
- $('stat').innerHTML=`${esc(S.h.p||'—')}<br>${A.n?A.pct+'% عيوب':''} ${S.dec?'· '+DEC[S.dec]:''}`;
- $('sugg').textContent=A.n?('اقتراح حسب الحد: '+(A.pass&&!A.pkBad?'مقبول':'مرفوض أو تحت المراجعة')):''}
-function renderPh(){$('phs').innerHTML=S.ph.map((p,i)=>`<div class="ph1"><img src="${p}"><button class="btn3" onclick="delPh(${i})">حذف</button></div>`).join('')}
-window.delPh=i=>{S.ph.splice(i,1);save();renderPh()};
-$('phIn').onchange=e=>{[...e.target.files].forEach(f=>{if(S.ph.length>=6){alert('أقصى عدد 6 صور');return}const im=new Image();im.onload=()=>{const m=900,sc=Math.min(1,m/Math.max(im.width,im.height));const cv=document.createElement('canvas');cv.width=im.width*sc;cv.height=im.height*sc;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.ph.push(cv.toDataURL('image/jpeg',0.6));URL.revokeObjectURL(im.src);save();renderPh()};im.src=URL.createObjectURL(f)});e.target.value=''};
-function fname(ext){return 'Quality_'+(S.h.p||'')+'_'+(S.h.date||'')+'.'+ext}
-function rowsAll(){const A=calc();const v=(o,k)=>o[k]??'';return {A,
- hdr:HF.map(([k,l])=>[l,v(S.h,k)]),
- qc:QF.map(([k,l])=>[l,k==='ratio'?A.ratio:v(S.q,k)]),
- tmp:TF.map(([k,l])=>[l,v(S.t,k)]),
- def:DF.map(([k,l])=>[l,Number(S.d[k])||0,A.per[k]]),
- pk:PK.map(([k,l])=>[l,v(S.pk,k)])}}
-function buildPrint(){const R=rowsAll(),A=R.A;const kv=a=>a.map(([l,x])=>`<tr><th>${esc(l)}</th><td>${esc(x)}</td></tr>`).join('');
- const page1=`<div class="page"><div class="safe"><div class="ptitle">تقرير الجودة <small>${esc(S.h.date)}</small></div>
- <div class="two"><table class="pt kv">${kv(R.hdr)}</table><table class="pt kv">${kv(R.qc)}${kv(R.tmp)}</table></div>
- <div class="two"><table class="pt"><tr><th>العيب</th><th>عدد</th><th>%</th></tr>${R.def.map(d=>`<tr><td>${esc(d[0])}</td><td>${d[1]}</td><td>${d[2]}</td></tr>`).join('')}<tr><th>الإجمالي</th><th>${A.sum}</th><th>${A.pct}%</th></tr></table>
- <div><table class="pt kv">${kv(R.pk)}</table><div class="res ${A.pass?'ok':'bad'}">الحد المسموح ${A.tol}% — ${A.n?(A.pass?'مطابق':'غير مطابق'):'—'}</div><div class="decb">القرار: <b>${esc(DEC[S.dec]||'....................')}</b></div></div></div>
- <div class="notes"><b>ملاحظات:</b> ${esc(S.note)}</div>
- <div class="sign"><span>مراقب الجودة: ${esc(S.h.insp)||'....................'}</span><span>التوقيع: ....................</span><span>مدير الجودة: ....................</span></div></div></div>`;
- const pp=[];for(let i=0;i<S.ph.length;i+=4)pp.push(S.ph.slice(i,i+4));
- $('print').innerHTML=page1+pp.map((g,i)=>`<div class="page"><div class="safe"><div class="ptitle">صور الفحص — ${esc(S.h.p)} <small>${i+1}/${pp.length}</small></div><div class="pgrid">${g.map(s=>`<img src="${s}">`).join('')}</div></div></div>`).join('')}
+function res(r){const n=Number(r.n)||0,rn=Number(r.rn)||0,dn=Number(r.dn)||0;if(!n)return {pct:'',txt:'',ok:null};
+ const pct=Math.round((rn+dn)/n*1000)/10;let txt,ok;if(rn>0){ok=false;txt='مخالف — عفن'}else if(pct>TOL){ok=false;txt='مخالف — تشوهات'}else{ok=true;txt='مطابق'}return {pct,txt,ok}}
+const opts=(k,v)=>`<option value=""></option>`+L[k].map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('');
+const sel=(i,f,k,lab)=>`<div><label>${lab}</label><select data-i="${i}" data-f="${f}">${opts(k,S.rows[i][f])}</select></div>`;
+const inp=(i,f,lab,t='text',x='')=>`<div><label>${lab}</label><input data-i="${i}" data-f="${f}" type="${t}" ${t==='number'?'inputmode="decimal" step="any"':''} value="${esc(S.rows[i][f])}" ${x}></div>`;
+const phBox=(i,f,lab)=>`<div class="phb"><label class="btn2 phbtn">+ ${lab}<input type="file" accept="image/*" multiple data-i="${i}" data-ph="${f}" style="display:none"></label><div class="phs">${S.rows[i][f].map((p,j)=>`<div class="ph1"><img src="${p}"><button class="btn3" onclick="delPh(${i},'${f}',${j})">×</button></div>`).join('')}</div></div>`;
+function card(i){const r=S.rows[i],R=res(r);return `<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span><b style="flex:1">كرتونة ${i+1}</b><span class="badge ${R.ok===null?'':R.ok?'ok':'bad'}" id="b${i}">${R.ok===null?'':R.pct+'% '+R.txt}</span><button class="btn3 sm" onclick="delRow(${i})">حذف</button></div>
+<div class="sl">بيانات الكرتونة</div><div class="rgrid">${inp(i,'time','الوقت','time')}${sel(i,'v','variety','الصنف')}${sel(i,'s','size','المقاس')}${sel(i,'c','carton','نوع الكرتون')}${sel(i,'g','grade','الدرجة')}${inp(i,'n','عدد الحبات بالكرتونة','number')}${inp(i,'w','وزن الكرتونة (كجم)','number')}${inp(i,'p','رقم الباليت (اختياري)','text','list="pl" dir="ltr" placeholder="P0001"')}</div>
+${phBox(i,'phC','صورة الكرتونة')}
+<div class="sl">مسببات الأعفان</div><div class="rgrid">${inp(i,'rn','عدد الحبات','number')}${sel(i,'rt','rot','نوع مسبب العفن')}</div>${phBox(i,'phR','صور العفن')}
+<div class="sl">التشوهات الخارجية</div><div class="rgrid">${inp(i,'dn','عدد الحبات','number')}${sel(i,'dt','def','نوع التشوهات')}</div>${phBox(i,'phD','صور التشوهات')}
+<div><label>ملاحظات / الإجراء</label><input data-i="${i}" data-f="note" value="${esc(r.note)}"></div></div>`}
+function render(){$('rows').innerHTML=S.rows.map((_,i)=>card(i)).join('');$('pl').innerHTML=prodPallets().map(r=>`<option value="${esc(r.p)}">${esc([r.v,r.s,r.g].join(' '))}</option>`).join('');upd()}
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='date'){S.date=t.value;save();upd();return}if(t.id==='insp'){S.insp=t.value;save();return}
+ if(t.dataset.f==null)return;const i=+t.dataset.i,f=t.dataset.f;let v=t.value;if(f==='p'){v=v.toUpperCase().replace(/\s/g,'');t.value=v;t.classList.toggle('err',!!v&&!VALID.test(v));const pr=prodPallets().find(x=>x.p===v);if(pr){['v','s','c','g'].forEach(k=>{if(!S.rows[i][k]&&pr[k])S.rows[i][k]=pr[k]});save();render();return}}
+ S.rows[i][f]=v;save();const R=res(S.rows[i]);const b=$('b'+i);b.className='badge '+(R.ok===null?'':R.ok?'ok':'bad');b.textContent=R.ok===null?'':R.pct+'% '+R.txt;upd()});
+document.addEventListener('change',e=>{const t=e.target;if(!t.dataset.ph)return;const i=+t.dataset.i,f=t.dataset.ph;let left=t.files.length;
+ [...t.files].forEach(file=>{const im=new Image();im.onload=()=>{const m=1000,sc=Math.min(1,m/Math.max(im.width,im.height));const cv=document.createElement('canvas');cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.rows[i][f].push(cv.toDataURL('image/jpeg',0.55));URL.revokeObjectURL(im.src);if(--left===0){save();render()}};im.onerror=()=>{if(--left===0){save();render()}};im.src=URL.createObjectURL(file)});t.value=''});
+window.delPh=(i,f,j)=>{S.rows[i][f].splice(j,1);save();render()};
+window.delRow=i=>{if(!confirm('تمسح كرتونة '+(i+1)+'؟'))return;S.rows.splice(i,1);if(!S.rows.length)S.rows.push(er());save();render()};
+$('addRow').onclick=()=>{const l=S.rows[S.rows.length-1];S.rows.push(er(l));save();render();$('r'+(S.rows.length-1)).scrollIntoView({behavior:'smooth'})};
+const used=()=>S.rows.map((r,i)=>({...r,i:i+1,R:res(r)})).filter(r=>r.n||r.v||r.rn||r.dn);
+function summ(){const u=used().filter(r=>r.R.ok!==null);const a={tot:u.length,ok:u.filter(r=>r.R.ok).length,bad:u.filter(r=>!r.R.ok).length,rot:u.filter(r=>Number(r.rn)>0).length,fr:0,rf:0,df:0,kg:0,rotT:{},defT:{},byV:{}};
+ u.forEach(r=>{a.fr+=+r.n||0;a.rf+=+r.rn||0;a.df+=+r.dn||0;a.kg+=+r.w||0;if(r.rt)a.rotT[r.rt]=(a.rotT[r.rt]||0)+(+r.rn||0);if(r.dt)a.defT[r.dt]=(a.defT[r.dt]||0)+(+r.dn||0);const k=r.v||'—';a.byV[k]=a.byV[k]||{n:0,ok:0,bad:0};a.byV[k].n++;r.R.ok?a.byV[k].ok++:a.byV[k].bad++});
+ a.pct=a.fr?Math.round((a.rf+a.df)/a.fr*1000)/10:0;a.okp=a.tot?Math.round(a.ok/a.tot*1000)/10:0;a.avgW=a.tot?Math.round(a.kg/u.filter(r=>r.w).length*100)/100||0:0;return a}
+function sumHTML(a,cls){const t=o=>Object.keys(o).map(k=>`<tr><td>${esc(k)}</td><td>${o[k]}</td></tr>`).join('')||'<tr><td colspan=2>—</td></tr>';
+ return `<table class="${cls}"><tr><th>البند</th><th>القيمة</th></tr><tr><td>الكراتين المفحوصة</td><td>${a.tot}</td></tr><tr><td>مطابق</td><td>${a.ok} (${a.okp}%)</td></tr><tr><td>مخالف</td><td>${a.bad}</td></tr><tr><td>كراتين فيها عفن</td><td>${a.rot}</td></tr><tr><td>إجمالي الحبات</td><td>${a.fr}</td></tr><tr><td>حبات معفنة</td><td>${a.rf}</td></tr><tr><td>حبات مشوهة</td><td>${a.df}</td></tr><tr><td>نسبة المعيب الكلية</td><td>${a.pct}%</td></tr><tr><td>متوسط وزن الكرتونة</td><td>${a.avgW||'—'} كجم</td></tr></table>
+ <div class="two2"><table class="${cls}"><tr><th>نوع العفن</th><th>حبات</th></tr>${t(a.rotT)}</table><table class="${cls}"><tr><th>نوع التشوه</th><th>حبات</th></tr>${t(a.defT)}</table></div>
+ <table class="${cls}"><tr><th>الصنف</th><th>كراتين</th><th>مطابق</th><th>مخالف</th></tr>${Object.keys(a.byV).map(k=>`<tr><td>${esc(k)}</td><td>${a.byV[k].n}</td><td>${a.byV[k].ok}</td><td>${a.byV[k].bad}</td></tr>`).join('')}</table>`}
+function upd(){const a=summ();$('summary').innerHTML=sumHTML(a,'sum');$('stat').innerHTML=`${a.tot} كرتونة<br>${a.ok} مطابق · ${a.bad} مخالف`}
+function fname(ext){return 'QC_'+(S.date||today())+'.'+ext}
+const COLS=['م','التاريخ','الوقت','الصنف','المقاس','نوع الكرتون','الدرجة','عدد الحبات بالكرتونة','وزن الكرتونة (كجم)','عدد حبات العفن','نوع مسبب الأعفان','عدد حبات التشوهات','نوع التشوهات','نسبة المعيب %','النتيجة','ملاحظات / الإجراء','رقم الباليت'];
+const vals=r=>[r.i,S.date,r.time,r.v,r.s,r.c,r.g,r.n,r.w,r.rn,r.rt,r.dn,r.dt,r.R.pct===''?'':r.R.pct+'%',r.R.txt,r.note,r.p];
+function buildPrint(){const u=used(),a=summ();const PER=22,pages=[];for(let k=0;k<Math.max(u.length,1);k+=PER)pages.push(u.slice(k,k+PER));
+ const head=`<div class="ph"><div><b>التاريخ:</b> ${esc(S.date)}</div><div><b>مراقب الجودة:</b> ${esc(S.insp)}</div><div><b>الحد المسموح:</b> ${TOL}% للكرتونة</div><div><b>أي حبة معفنة = الكرتونة مخالفة</b></div></div>`;
+ let h=pages.map((pg,pi)=>`<div class="page"><div class="safe"><div class="ptitle">تقرير الجودة — فحص التشغيل ${pages.length>1?`<small>${pi+1}/${pages.length}</small>`:''}</div>${pi===0?head:''}
+ <table class="pt" style="font-size:6.6pt"><tr>${COLS.slice(0,16).filter((_,k)=>k!==1).map(c=>`<th style="white-space:normal;line-height:1.1;height:8mm">${c.replace(' (كجم)','')}</th>`).join('')}</tr>
+ ${pg.map(r=>{const v=vals(r);v.splice(1,1);return `<tr class="${r.R.ok===false?'bd':''}">${v.slice(0,15).map(x=>`<td>${esc(x)}</td>`).join('')}</tr>`}).join('')}</table></div></div>`).join('');
+ h+=`<div class="page"><div class="safe"><div class="ptitle">ملخص اليوم <small>${esc(S.date)}</small></div>${sumHTML(a,'pt sm2')}<div class="sign"><span>مراقب الجودة: ${esc(S.insp)||'....................'}</span><span>التوقيع: ....................</span><span>مدير الجودة: ....................</span></div></div></div>`;
+ const ph=[];u.forEach(r=>{[['phC','الكرتونة'],['phR','عفن'+(r.rt?' — '+r.rt:'')],['phD','تشوهات'+(r.dt?' — '+r.dt:'')]].forEach(([f,l])=>r[f].forEach(s=>ph.push({s,l:`كرتونة ${r.i} — ${l}`})))});
+ for(let k=0;k<ph.length;k+=6)h+=`<div class="page"><div class="safe"><div class="ptitle">صور الفحص</div><div class="pgrid">${ph.slice(k,k+6).map(p=>`<figure><img src="${p.s}"><figcaption>${esc(p.l)}</figcaption></figure>`).join('')}</div></div></div>`;
+ $('print').innerHTML=h}
 window.addEventListener('beforeprint',buildPrint);
 $('bPrint').onclick=()=>{buildPrint();const t=document.title;document.title=fname('pdf').replace('.pdf','');setTimeout(()=>{window.print();document.title=t},50)};
 const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c}return t})();
@@ -182,29 +168,27 @@ const X=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 const STY='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="14"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F5233"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
 const colL=i=>String.fromCharCode(65+i);
-function makeXlsx(){const R0=rowsAll(),A=R0.A;const R=[];let r=1;
- const cell=(c,v,s)=>typeof v==='number'?`<c r="${c}"${s?` s="${s}"`:''}><v>${v}</v></c>`:`<c r="${c}" t="inlineStr"${s?` s="${s}"`:''}><is><t>${X(v)}</t></is></c>`;
- const N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));
- const row=(vals,s)=>{R.push(`<row r="${r}">${vals.map((v,i)=>v===''||v==null?'':cell(colL(i)+r,v,s)).join('')}</row>`);r++};
- row(['تقرير الجودة — شركة العلا لفرز الحاصلات الزراعية'],1);r++;
- row(['بيانات الباليت'],2);R0.hdr.forEach(x=>row([x[0],N(x[1])]));r++;
- row(['الفحص'],2);R0.qc.concat(R0.tmp).forEach(x=>row([x[0],N(x[1])]));r++;
- row(['العيب','عدد','%'],2);R0.def.forEach(x=>row(x));row(['إجمالي العيوب',A.sum,A.pct],2);row(['الحد المسموح %',N(A.tol)]);row(['النتيجة',A.n?(A.pass?'مطابق':'غير مطابق'):'']);r++;
- row(['فحص التعبئة','النتيجة'],2);R0.pk.forEach(x=>row(x));r++;
- row(['القرار',DEC[S.dec]||'']);row(['ملاحظات',S.note]);row(['عدد الصور',S.ph.length]);
- const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols><col min="1" max="1" width="32" customWidth="1"/><col min="2" max="3" width="18" customWidth="1"/></cols><sheetData>${R.join('')}</sheetData></worksheet>`;
- const CT='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
- return zip([['[Content_Types].xml',CT],
+function sheetXml(build,widths){const R=[];let r=1;const cell=(c,v,s)=>typeof v==='number'?`<c r="${c}"${s?` s="${s}"`:''}><v>${v}</v></c>`:`<c r="${c}" t="inlineStr"${s?` s="${s}"`:''}><is><t>${X(v)}</t></is></c>`;
+ const row=(vals,s)=>{R.push(`<row r="${r}">${vals.map((v,i)=>v===''||v==null?'':cell(colL(i)+r,v,s)).join('')}</row>`);r++};build(row,()=>r++);
+ return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView rightToLeft="1" workbookViewId="0"/></sheetViews><cols>${widths}</cols><sheetData>${R.join('')}</sheetData></worksheet>`}
+const N=v=>v===''||v==null?'':(isNaN(Number(v))?v:Number(v));
+function makeXlsx(){const u=used(),a=summ();
+ const s1=sheetXml((row,sk)=>{row(['فحص التشغيل — شركة العلا لفرز الحاصلات الزراعية'],1);row(['مراقب الجودة',S.insp]);sk();row(COLS,2);u.forEach(r=>{const v=vals(r);row(v.map((x,k)=>k===13?r.R.pct:N(x)))})},'<col min="1" max="17" width="13" customWidth="1"/>');
+ const s2=sheetXml((row,sk)=>{row(['ملخص اليوم '+S.date],1);sk();[['الكراتين المفحوصة',a.tot],['مطابق',a.ok],['مخالف',a.bad],['نسبة المطابق %',a.okp],['كراتين فيها عفن',a.rot],['إجمالي الحبات',a.fr],['حبات معفنة',a.rf],['حبات مشوهة',a.df],['نسبة المعيب الكلية %',a.pct],['متوسط وزن الكرتونة كجم',a.avgW]].forEach(x=>row(x));sk();
+  row(['نوع العفن','حبات'],2);Object.keys(a.rotT).forEach(k=>row([k,a.rotT[k]]));sk();row(['نوع التشوه','حبات'],2);Object.keys(a.defT).forEach(k=>row([k,a.defT[k]]));sk();row(['الصنف','كراتين','مطابق','مخالف'],2);Object.keys(a.byV).forEach(k=>row([k,a.byV[k].n,a.byV[k].ok,a.byV[k].bad]))},'<col min="1" max="1" width="26" customWidth="1"/><col min="2" max="4" width="12" customWidth="1"/>');
+ const mx=Math.max(L.size.length,L.rot.length);const s3=sheetXml((row)=>{row(['الصنف','المقاس','نوع الكرتون','الدرجة','نوع مسبب الأعفان','نوع التشوهات','','حد التشوهات المسموح في الكرتونة'],2);for(let k=0;k<mx;k++)row([L.variety[k],N(L.size[k]),L.carton[k],L.grade[k],L.rot[k],L.def[k],'',k===0?'15%':k===1?'أي حبة معفنة = الكرتونة مخالفة':''])},'<col min="1" max="8" width="18" customWidth="1"/>');
+ const sh=['فحص التشغيل','ملخص اليوم','القوائم'];
+ return zip([['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+[1,2,3].map(n=>`<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
  ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
- ['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Quality" sheetId="1" r:id="rId1"/></sheets></workbook>'],
- ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
- ['xl/styles.xml',STY],['xl/worksheets/sheet1.xml',sheet]])}
+ ['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sh.map((n,k)=>`<sheet name="${n}" sheetId="${k+1}" r:id="rId${k+1}"/>`).join('')+'</sheets></workbook>'],
+ ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+[1,2,3].map(n=>`<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${n}.xml"/>`).join('')+'<Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+ ['xl/styles.xml',STY],['xl/worksheets/sheet1.xml',s1],['xl/worksheets/sheet2.xml',s2],['xl/worksheets/sheet3.xml',s3]])}
 $('bXlsx').onclick=()=>download(makeXlsx(),fname('xlsx'));
-$('bShare').onclick=async()=>{const A=calc();const f=new File([makeXlsx()],fname('xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
- const text=`تقرير الجودة ${S.h.date} — باليت ${S.h.p} — عيوب ${A.pct}% — ${DEC[S.dec]||''}`;
- if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Quality Report',text});return}catch(e){if(e.name==='AbortError')return}}
- download(makeXlsx(),fname('xlsx'));alert('المشاركة المباشرة مش مدعومة هنا — اتحفظ ملف Excel.')};
-$('bNew').onclick=()=>{if(confirm('هتبدأ تقرير جديد وهيتمسح التقرير الحالي. اتأكد إنك بعته الأول. متأكد؟')){S=blank(S);save();fill();scrollTo(0,0)}};
-build();fill();
+$('bShare').onclick=async()=>{const a=summ();const f=new File([makeXlsx()],fname('xlsx'),{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const text=`تقرير الجودة ${S.date} — ${a.tot} كرتونة: ${a.ok} مطابق / ${a.bad} مخالف`;
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'QC Report',text});return}catch(e){if(e.name==='AbortError')return}}download(makeXlsx(),fname('xlsx'));alert('المشاركة المباشرة مش مدعومة هنا — اتحفظ ملف Excel.')};
+$('bNew').onclick=()=>{if(confirm('هتبدأ يوم جديد وهيتمسح تقرير اليوم والصور. اتأكد إنك بعته الأول. متأكد؟')){S=blank(S);save();init();scrollTo(0,0)}};
+function init(){$('date').value=S.date;$('insp').value=S.insp;render()}
+if(location.hash==='#t'){S={date:'2026-10-13',insp:'م. تست',rows:[['08:00','أبو سرة','32','أوين 7 ك','تانية',32,1,'',1,'خدش / جرح'],['08:30','أبو سرة','42','مقفول 7 ك','تانية',42,0,'',3,'تبقع زيتي'],['08:30','أبو سرة','36','مقفول 7 ك','تانية',36,0,'',8,'حجم مخالف']].map(x=>({...er(),time:x[0],v:x[1],s:x[2],c:'مقفول 7 ك',g:x[4],n:x[5],w:'7.2',rn:x[6],rt:x[6]?'عفن أخضر':'',dn:x[8],dt:x[9]}))}}
+init();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
