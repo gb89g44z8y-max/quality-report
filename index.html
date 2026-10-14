@@ -23,6 +23,7 @@ main{padding:12px;max-width:900px;margin:auto;padding-bottom:110px}
 label{display:block;font-size:13px;color:#555;margin:8px 0 4px}
 input,select{width:100%;min-height:46px;font-size:16px;padding:8px 10px;border:1.5px solid #ccc;border-radius:10px;background:#fff;font-family:inherit}
 input:focus,select:focus{outline:none;border-color:var(--g2);box-shadow:0 0 0 3px #4a7c5033}
+.rotr{display:grid;grid-template-columns:80px 1fr auto;gap:6px;margin-bottom:6px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 @media(max-width:420px){.grid2{grid-template-columns:1fr}}
 .other{margin-top:6px}
@@ -104,9 +105,12 @@ rot:["عفن أخضر","عفن أزرق","عفن حامضي","عفن أسود","
 def:["خدش / جرح","كدمات / ضغط","تشوه شكل","حرق شمس","تبقع زيتي","خدوش رياح","حشرات / قشرية","حجم مخالف","أخرى"]};
 const TOL=15,KEY='alola_qc_carton_v1',PKEY='alola_production_v1',VALID=/^P\d{4}$/;
 const now=()=>new Date().toTimeString().slice(0,5),today=()=>new Date().toISOString().slice(0,10);
-const er=(p)=>({time:now(),v:p?.v||'',s:p?.s||'',c:p?.c||'',g:p?.g||'',n:'',w:'',p:'',rn:'',rt:'',dn:'',dt:'',note:'',phC:[],phR:[],phD:[]});
+const er0=(p)=>({time:now(),v:p?.v||'',s:p?.s||'',c:p?.c||'',g:p?.g||'',n:'',w:'',p:'',rn:'',rt:'',rots:[{n:'',t:''},{n:'',t:''},{n:'',t:''}],dn:'',dt:'',note:'',phC:[],phR:[],phD:[]});
+const er=p=>{const r=er0(p);return r};
 const blank=k=>({date:today(),insp:k?.insp||'',rows:[er()]});
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&x.rows)return x}catch(e){}return blank()}
+function mig(r){if(!Array.isArray(r.rots)){r.rots=[{n:r.rn??'',t:r.rt??''},{n:'',t:''},{n:'',t:''}]}while(r.rots.length<3)r.rots.push({n:'',t:''});syncRot(r);return r}
+function syncRot(r){const a=r.rots.filter(x=>Number(x.n)>0||x.t);const tot=r.rots.reduce((t,x)=>t+(Number(x.n)||0),0);r.rn=a.length||r.rots.some(x=>x.n!=='')?String(tot):'';r.rt=a.map(x=>((Number(x.n)||'')+' '+(x.t||'')).trim()).join('، ')}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&x.rows){x.rows.forEach(mig);return x}}catch(e){}return blank()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('مساحة التخزين على الموبايل اتملت — امسح صور قديمة أو ابدأ يوم جديد بعد ما تبعت التقرير')}}
 function prodPallets(){try{const x=JSON.parse(localStorage.getItem(PKEY));return (x&&x.rows||[]).filter(r=>VALID.test(r.p||''))}catch(e){return[]}}
@@ -119,21 +123,23 @@ const phBox=(i,f,lab)=>`<div class="phb"><label class="btn2 phbtn">+ ${lab}<inpu
 function card(i){const r=S.rows[i],R=res(r);return `<div class="row" id="r${i}"><div class="top"><span class="num">${i+1}</span><b style="flex:1">كرتونة ${i+1}</b><span class="badge ${R.ok===null?'':R.ok?'ok':'bad'}" id="b${i}">${R.ok===null?'':R.pct+'% '+R.txt}</span><button class="btn3 sm" onclick="delRow(${i})">حذف</button></div>
 <div class="sl">بيانات الكرتونة</div><div class="rgrid">${inp(i,'time','الوقت','time')}${sel(i,'v','variety','الصنف')}${sel(i,'s','size','المقاس')}${sel(i,'c','carton','نوع الكرتون')}${sel(i,'g','grade','الدرجة')}${inp(i,'n','عدد الحبات بالكرتونة','number')}${inp(i,'w','وزن الكرتونة (كجم)','number')}${inp(i,'p','رقم الباليت (اختياري)','text','list="pl" dir="ltr" placeholder="P0001"')}</div>
 ${phBox(i,'phC','صورة الكرتونة')}
-<div class="sl">مسببات الأعفان</div><div class="rgrid">${inp(i,'rn','عدد الحبات','number')}${sel(i,'rt','rot','نوع مسبب العفن')}</div>${phBox(i,'phR','صور العفن')}
+<div class="sl">مسببات الأعفان — الإجمالي: <b id="rt${i}">${Number(r.rn)||0}</b> حبة</div>${r.rots.map((x,j)=>`<div class="rotr"><input data-i="${i}" data-rot="${j}" data-k="n" type="number" inputmode="numeric" min="0" placeholder="عدد" value="${esc(x.n)}"><select data-i="${i}" data-rot="${j}" data-k="t"><option value="">نوع مسبب العفن</option>${L.rot.map(o=>`<option${o===x.t?' selected':''}>${esc(o)}</option>`).join('')}</select>${j>=3?`<button class="btn3 sm" onclick="delRot(${i},${j})">×</button>`:''}</div>`).join('')}<button class="btn2 sm" style="width:100%;margin-top:4px" onclick="addRot(${i})">+ إضافة مسبب</button>${phBox(i,'phR','صور العفن')}
 <div class="sl">التشوهات الخارجية</div><div class="rgrid">${inp(i,'dn','عدد الحبات','number')}${sel(i,'dt','def','نوع التشوهات')}</div>${phBox(i,'phD','صور التشوهات')}
 <div><label>ملاحظات / الإجراء</label><input data-i="${i}" data-f="note" value="${esc(r.note)}"></div></div>`}
 function render(){$('rows').innerHTML=S.rows.map((_,i)=>card(i)).join('');$('pl').innerHTML=prodPallets().map(r=>`<option value="${esc(r.p)}">${esc([r.v,r.s,r.g].join(' '))}</option>`).join('');upd()}
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='date'){S.date=t.value;save();upd();return}if(t.id==='insp'){S.insp=t.value;save();return}
+ if(t.dataset.rot!=null){const i=+t.dataset.i,r=S.rows[i];r.rots[+t.dataset.rot][t.dataset.k]=t.value;syncRot(r);save();$('rt'+i).textContent=Number(r.rn)||0;const R=res(r);const b=$('b'+i);b.className='badge '+(R.ok===null?'':R.ok?'ok':'bad');b.textContent=R.ok===null?'':R.pct+'% '+R.txt;upd();return}
  if(t.dataset.f==null)return;const i=+t.dataset.i,f=t.dataset.f;let v=t.value;if(f==='p'){v=v.toUpperCase().replace(/\s/g,'');t.value=v;t.classList.toggle('err',!!v&&!VALID.test(v));const pr=prodPallets().find(x=>x.p===v);if(pr){['v','s','c','g'].forEach(k=>{if(!S.rows[i][k]&&pr[k])S.rows[i][k]=pr[k]});save();render();return}}
  S.rows[i][f]=v;save();const R=res(S.rows[i]);const b=$('b'+i);b.className='badge '+(R.ok===null?'':R.ok?'ok':'bad');b.textContent=R.ok===null?'':R.pct+'% '+R.txt;upd()});
 document.addEventListener('change',e=>{const t=e.target;if(!t.dataset.ph)return;const i=+t.dataset.i,f=t.dataset.ph;let left=t.files.length;
  [...t.files].forEach(file=>{const im=new Image();im.onload=()=>{const m=1000,sc=Math.min(1,m/Math.max(im.width,im.height));const cv=document.createElement('canvas');cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.rows[i][f].push(cv.toDataURL('image/jpeg',0.55));URL.revokeObjectURL(im.src);if(--left===0){save();render()}};im.onerror=()=>{if(--left===0){save();render()}};im.src=URL.createObjectURL(file)});t.value=''});
+window.addRot=i=>{S.rows[i].rots.push({n:'',t:''});save();render()};window.delRot=(i,j)=>{S.rows[i].rots.splice(j,1);syncRot(S.rows[i]);save();render()};
 window.delPh=(i,f,j)=>{S.rows[i][f].splice(j,1);save();render()};
 window.delRow=i=>{if(!confirm('تمسح كرتونة '+(i+1)+'؟'))return;S.rows.splice(i,1);if(!S.rows.length)S.rows.push(er());save();render()};
 $('addRow').onclick=()=>{const l=S.rows[S.rows.length-1];S.rows.push(er(l));save();render();$('r'+(S.rows.length-1)).scrollIntoView({behavior:'smooth'})};
 const used=()=>S.rows.map((r,i)=>({...r,i:i+1,R:res(r)})).filter(r=>r.n||r.v||r.rn||r.dn);
 function summ(){const u=used().filter(r=>r.R.ok!==null);const a={tot:u.length,ok:u.filter(r=>r.R.ok).length,bad:u.filter(r=>!r.R.ok).length,rot:u.filter(r=>Number(r.rn)>0).length,fr:0,rf:0,df:0,kg:0,rotT:{},defT:{},byV:{}};
- u.forEach(r=>{a.fr+=+r.n||0;a.rf+=+r.rn||0;a.df+=+r.dn||0;a.kg+=+r.w||0;if(r.rt)a.rotT[r.rt]=(a.rotT[r.rt]||0)+(+r.rn||0);if(r.dt)a.defT[r.dt]=(a.defT[r.dt]||0)+(+r.dn||0);const k=r.v||'—';a.byV[k]=a.byV[k]||{n:0,ok:0,bad:0};a.byV[k].n++;r.R.ok?a.byV[k].ok++:a.byV[k].bad++});
+ u.forEach(r=>{a.fr+=+r.n||0;a.rf+=+r.rn||0;a.df+=+r.dn||0;a.kg+=+r.w||0;r.rots.forEach(x=>{const n=+x.n||0;if(n||x.t){const k=x.t||'غير محدد';a.rotT[k]=(a.rotT[k]||0)+n}});if(r.dt)a.defT[r.dt]=(a.defT[r.dt]||0)+(+r.dn||0);const k=r.v||'—';a.byV[k]=a.byV[k]||{n:0,ok:0,bad:0};a.byV[k].n++;r.R.ok?a.byV[k].ok++:a.byV[k].bad++});
  a.pct=a.fr?Math.round((a.rf+a.df)/a.fr*1000)/10:0;a.okp=a.tot?Math.round(a.ok/a.tot*1000)/10:0;a.avgW=a.tot?Math.round(a.kg/u.filter(r=>r.w).length*100)/100||0:0;return a}
 function sumHTML(a,cls){const t=o=>Object.keys(o).map(k=>`<tr><td>${esc(k)}</td><td>${o[k]}</td></tr>`).join('')||'<tr><td colspan=2>—</td></tr>';
  return `<table class="${cls}"><tr><th>البند</th><th>القيمة</th></tr><tr><td>الكراتين المفحوصة</td><td>${a.tot}</td></tr><tr><td>مطابق</td><td>${a.ok} (${a.okp}%)</td></tr><tr><td>مخالف</td><td>${a.bad}</td></tr><tr><td>كراتين فيها عفن</td><td>${a.rot}</td></tr><tr><td>إجمالي الحبات</td><td>${a.fr}</td></tr><tr><td>حبات معفنة</td><td>${a.rf}</td></tr><tr><td>حبات مشوهة</td><td>${a.df}</td></tr><tr><td>نسبة المعيب الكلية</td><td>${a.pct}%</td></tr><tr><td>متوسط وزن الكرتونة</td><td>${a.avgW||'—'} كجم</td></tr></table>
@@ -141,7 +147,7 @@ function sumHTML(a,cls){const t=o=>Object.keys(o).map(k=>`<tr><td>${esc(k)}</td>
  <table class="${cls}"><tr><th>الصنف</th><th>كراتين</th><th>مطابق</th><th>مخالف</th></tr>${Object.keys(a.byV).map(k=>`<tr><td>${esc(k)}</td><td>${a.byV[k].n}</td><td>${a.byV[k].ok}</td><td>${a.byV[k].bad}</td></tr>`).join('')}</table>`}
 function upd(){const a=summ();$('summary').innerHTML=sumHTML(a,'sum');$('stat').innerHTML=`${a.tot} كرتونة<br>${a.ok} مطابق · ${a.bad} مخالف`}
 function fname(ext){return 'QC_'+(S.date||today())+'.'+ext}
-const COLS=['م','التاريخ','الوقت','الصنف','المقاس','نوع الكرتون','الدرجة','عدد الحبات بالكرتونة','وزن الكرتونة (كجم)','عدد حبات العفن','نوع مسبب الأعفان','عدد حبات التشوهات','نوع التشوهات','نسبة المعيب %','النتيجة','ملاحظات / الإجراء','رقم الباليت'];
+const COLS=['م','التاريخ','الوقت','الصنف','المقاس','نوع الكرتون','الدرجة','عدد الحبات بالكرتونة','وزن الكرتونة (كجم)','إجمالي حبات العفن','مسببات الأعفان (عدد ونوع)','عدد حبات التشوهات','نوع التشوهات','نسبة المعيب %','النتيجة','ملاحظات / الإجراء','رقم الباليت'];
 const vals=r=>[r.i,S.date,r.time,r.v,r.s,r.c,r.g,r.n,r.w,r.rn,r.rt,r.dn,r.dt,r.R.pct===''?'':r.R.pct+'%',r.R.txt,r.note,r.p];
 function buildPrint(){const u=used(),a=summ();const PER=22,pages=[];for(let k=0;k<Math.max(u.length,1);k+=PER)pages.push(u.slice(k,k+PER));
  const head=`<div class="ph"><div><b>التاريخ:</b> ${esc(S.date)}</div><div><b>مراقب الجودة:</b> ${esc(S.insp)}</div><div><b>الحد المسموح:</b> ${TOL}% للكرتونة</div><div><b>أي حبة معفنة = الكرتونة مخالفة</b></div></div>`;
