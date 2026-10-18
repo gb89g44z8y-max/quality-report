@@ -180,6 +180,12 @@ button.sm{min-height:34px;font-size:13px;padding:4px 10px}.phbtn{display:block;t
 #print .tg img{width:100%;height:18mm;object-fit:cover;display:block}#print .tg figcaption{font-size:6.3pt;text-align:center;padding:.3mm}
 #print .tg .phR figcaption{background:#fee2e2;color:#991b1b}#print .tg .phD figcaption{background:#fef3c7;color:#92400e}
 #print .sig{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;border-top:.3mm solid #9ca3af;padding-top:2mm;font-size:8pt;margin-top:1mm}
+#print .wm{position:absolute;top:50%;font:700 13pt/1 Arial,sans-serif;letter-spacing:4mm;color:#000;opacity:.12;white-space:nowrap;pointer-events:none;z-index:3}
+#print .wm-r{right:5mm;transform:translate(50%,-50%) rotate(90deg);right:6mm}
+#print .wm-l{left:6mm;transform:translate(-50%,-50%) rotate(-90deg)}
+body::before,body::after{content:"AMIR RASHED";position:fixed;top:50%;font:700 13px/1 Arial,sans-serif;letter-spacing:6px;color:#000;opacity:.07;white-space:nowrap;pointer-events:none;z-index:4}
+body::before{right:9px;transform:translate(50%,-50%) rotate(90deg)}body::after{left:9px;transform:translate(-50%,-50%) rotate(-90deg)}
+@media print{body::before,body::after{display:none}}
 #print .fit{position:absolute;top:0;right:0}
 #print .tgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:1.5mm}#print .tgrid figure{margin:0}#print .tgrid img{width:100%;height:24mm;object-fit:cover;border:.2mm solid #aaa;display:block}#print .tgrid figcaption{font-size:6.5pt;text-align:center;white-space:nowrap;overflow:hidden}
 @media print{table.ct{font-size:6.6pt}table.ct th{white-space:normal;line-height:1.1;height:7mm;font-size:6.4pt}.safe .ph{margin-bottom:1mm}.sign{margin-top:3mm}.page{height:296mm!important}}
@@ -295,7 +301,7 @@ function buildPrint(){const u=used(),a=summ();const P1=x=>a.fr?Math.round(x/a.fr
  <div class="g3"><table class="t"><tr><th>الدرجة</th><th>الحد</th><th>كراتين</th><th class="h-ok">مطابق</th><th class="h-rot">عفن</th><th class="h-def">تشوه</th><th>% قبول</th></tr>${grR}</table>${grp(a.byG,'المزرعة')}${grp(a.byL,'الخط')}</div>
  ${phH}
  <div class="sig"><span>مراقب الجودة: ${esc(S.insp)||'................'}</span><span>التوقيع: ................</span><span>مدير الجودة: ................</span><span>الاعتماد: ................</span></div>`;
- $('print').innerHTML=`<div class="page"><div class="safe"><div class="fit rp">${html}</div></div></div>`;
+ $('print').innerHTML=`<div class="page"><div class="wm wm-r">AMIR RASHED</div><div class="wm wm-l">AMIR RASHED</div><div class="safe"><div class="fit rp">${html}</div></div></div>`;
  fitPrint()}
 function fitPrint(){const P=$('print'),f=P.querySelector('.fit'),sf=P.querySelector('.safe');const old=P.getAttribute('style');P.setAttribute('style','display:block;position:absolute;left:-9999px;top:0;width:210mm');
  sf.style.position='absolute';const H=sf.clientHeight;let sc=1;
